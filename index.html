@@ -22,7 +22,6 @@
         .user-name { font-weight: bold; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .btn-auth { font-size: 0.7rem; padding: 4px 10px; border-radius: 12px; border: 1px solid #ccc; cursor: pointer; background: #fff; color: #333; }
 
-        /* ビデオエリアを修正 */
         #video-frame {
             width: 100%; aspect-ratio: 16/9; background: #000;
             border-radius: 12px; overflow: hidden; margin: 10px 0;
@@ -46,10 +45,13 @@
         .st-mark { width: 85%; height: 85%; background: var(--stamp); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; position: absolute; visibility: hidden; z-index: 2; }
         .is-done .st-mark { visibility: visible; }
 
+        /* モーダル */
         #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; }
-        .modal-inner { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 85%; max-width: 350px; text-align: left; }
+        .modal-inner { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 85%; max-width: 350px; text-align: left; max-height: 90vh; overflow-y: auto; }
         input { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        .btn-save { background: #ff0000; color: #fff; border: none; padding: 12px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; }
+        .btn-save { background: #ff0000; color: #fff; border: none; padding: 12px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 10px; }
+        .btn-delete { background: #fff; color: #ff0000; border: 1px solid #ff0000; padding: 8px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 0.8rem; margin-top: 20px; }
+        
         .hidden { display: none !important; }
     </style>
 </head>
@@ -87,10 +89,12 @@
 <div id="modal" class="hidden">
     <div class="modal-inner">
         <h3 style="margin-top:0;">設定</h3>
-        <label>目標</label><input type="text" id="in-goal">
-        <label>YouTube URL</label><input type="text" id="in-url" placeholder="https://www.youtube.com/watch?v=...">
-        <label>ハンコ文字</label><input type="text" id="in-stamp" maxlength="2">
-        <button onclick="saveAll()" class="btn-save">保存</button>
+        <label>目標</label><input type="text" id="in-goal" placeholder="例：毎日6時に体操！">
+        <label>YouTube URL</label><input type="text" id="in-url" placeholder="https://...">
+        <label>ハンコ文字</label><input type="text" id="in-stamp" maxlength="2" placeholder="済">
+        <button onclick="saveAll()" class="btn-save">保存して閉じる</button>
+        
+        <button id="delete-section" class="btn-delete hidden" onclick="deleteMyData()">登録データをすべて消去する</button>
     </div>
 </div>
 
@@ -99,20 +103,16 @@ const S_URL = 'https://fzuqxlixsyoieljykdxy.supabase.co';
 const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6dXF4bGl4c3lvaWVsanlrZHh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODA4NjIsImV4cCI6MjA5MDQ1Njg2Mn0.F5uX0CvKiazJ2ptYJ090Vb-G1HlMq8Qe48f-VeZKJUM';
 const sb = supabase.createClient(S_URL, S_KEY);
 
+// デフォルト設定（未ログイン時）
+const DEFAULT_CONF = { bg: '#ffffff', text: '#000000', stamp: '#ff0000', goal: '目標を設定してください', url: '', stampTxt: '済' };
 let player, apiReady = false, currentUser = null;
-let conf = { bg: '#ffffff', text: '#000000', stamp: '#ff0000', goal: '', url: 'https://www.youtube.com/watch?v=feSVtC1BSeQ', stampTxt: '済' };
+let conf = { ...DEFAULT_CONF };
 let cardDate = new Date();
 let allStamps = [];
 
-// YouTube API
 const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
-window.onYouTubeIframeAPIReady = () => { 
-    apiReady = true; 
-    console.log("YouTube API Ready");
-    if(conf.url) initPlayer(conf.url); 
-};
+window.onYouTubeIframeAPIReady = () => { apiReady = true; if(conf.url) initPlayer(conf.url); };
 
-// 認証・同期
 async function login() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
@@ -123,38 +123,54 @@ sb.auth.onAuthStateChange((event, session) => {
         document.getElementById('display-avatar').src = currentUser.user_metadata.avatar_url;
         document.getElementById('btn-login').classList.add('hidden');
         document.getElementById('btn-logout').classList.remove('hidden');
+        document.getElementById('delete-section').classList.remove('hidden');
         syncData();
     } else {
+        // 未ログイン時は初期化
+        currentUser = null;
+        conf = { ...DEFAULT_CONF };
+        allStamps = [];
+        applyUI();
         renderAll();
+        // ゲストには設定画面を自動表示
+        openConfig();
     }
 });
 
 async function syncData() {
     if(!currentUser) return;
     const { data: settings } = await sb.from('user_settings').select('*').eq('user_id', currentUser.id).maybeSingle();
-    if(settings) {
+    
+    // ログインしているが設定が空（新規ユーザー）の場合、設定画面を強制表示
+    if(!settings) {
+        openConfig();
+    } else {
         conf = { bg: settings.bg_color, text: settings.text_color, stamp: settings.stamp_color, goal: settings.goal_text, url: settings.video_url, stampTxt: settings.font_family };
-        applyUI();
     }
+    
     const { data: stamps } = await sb.from('daily_stamps').select('stamped_date').eq('user_id', currentUser.id);
     allStamps = stamps?.map(d => d.stamped_date) || [];
     document.getElementById('streak-num').innerText = allStamps.length;
+    applyUI();
     renderAll();
 }
 
-// プレイヤー初期化を強化
+async function deleteMyData() {
+    if(!confirm("設定とスタンプ履歴をすべて削除します。よろしいですか？")) return;
+    if(currentUser) {
+        await sb.from('daily_stamps').delete().eq('user_id', currentUser.id);
+        await sb.from('user_settings').delete().eq('user_id', currentUser.id);
+        alert("データを削除しました。ログアウトします。");
+        logout();
+    }
+}
+
 function initPlayer(url) {
     if(!apiReady || !url) return;
-    
-    // 強力なID抽出正規表現
     const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     const match = url.match(regExp);
     const videoId = (match && match[7].length == 11) ? match[7] : null;
-
-    if(!videoId) {
-        console.error("Invalid YouTube URL");
-        return;
-    }
+    if(!videoId) return;
 
     if(player && player.loadVideoById) {
         player.loadVideoById(videoId);
@@ -167,7 +183,6 @@ function initPlayer(url) {
     }
 }
 
-// 以下、描画ロジックは変更なし
 function renderAll() {
     const now = new Date();
     const todayStr = now.toLocaleDateString('sv-SE');
@@ -204,29 +219,34 @@ function applyUI() {
     document.documentElement.style.setProperty('--bg', conf.bg);
     document.documentElement.style.setProperty('--text', conf.text);
     document.documentElement.style.setProperty('--stamp', conf.stamp);
-    document.getElementById('view-goal').innerText = conf.goal || "目標を設定してください";
+    document.getElementById('view-goal').innerText = conf.goal;
     if(conf.url && apiReady) initPlayer(conf.url);
 }
 
 function changeMonth(diff) { cardDate.setMonth(cardDate.getMonth() + diff); renderAll(); }
 function openConfig() {
     document.getElementById('modal').classList.remove('hidden');
-    document.getElementById('in-goal').value = conf.goal;
+    document.getElementById('in-goal').value = (conf.goal === DEFAULT_CONF.goal) ? "" : conf.goal;
     document.getElementById('in-url').value = conf.url;
     document.getElementById('in-stamp').value = conf.stampTxt;
 }
 
 async function saveAll() {
-    conf.goal = document.getElementById('in-goal').value;
-    conf.url = document.getElementById('in-url').value;
-    conf.stampTxt = document.getElementById('in-stamp').value || '済';
-    if(currentUser) {
+    const newGoal = document.getElementById('in-goal').value || DEFAULT_CONF.goal;
+    const newUrl = document.getElementById('in-url').value;
+    const newStamp = document.getElementById('in-stamp').value || '済';
+    
+    if(!currentUser) {
+        alert("設定を保存するにはログインが必要です。このまま閉じると一時的な表示のみになります。");
+    } else {
         await sb.from('user_settings').upsert({
-            user_id: currentUser.id, goal_text: conf.goal, video_url: conf.url,
-            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: conf.stampTxt
+            user_id: currentUser.id, goal_text: newGoal, video_url: newUrl,
+            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: newStamp
         });
         syncData();
     }
+    conf.goal = newGoal; conf.url = newUrl; conf.stampTxt = newStamp;
+    applyUI();
     document.getElementById('modal').classList.add('hidden');
 }
 
