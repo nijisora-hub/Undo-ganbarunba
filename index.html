@@ -23,46 +23,45 @@
             background: #eee; border: 1px solid #ccc; object-fit: cover;
         }
         .user-name { font-weight: bold; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
         .btn-auth { font-size: 0.7rem; padding: 4px 10px; border-radius: 12px; border: 1px solid #ccc; cursor: pointer; background: #fff; color: #333; }
 
         #video-frame {
             width: 100%; aspect-ratio: 16/9; background: #333;
             border-radius: 12px; overflow: hidden; margin: 10px 0;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            display: flex; align-items: center; justify-content: center;
         }
         #player { width: 100%; height: 100%; }
 
+        /* グリッド共通設定 */
         .grid-header { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 5px; font-weight: bold; font-size: 0.7rem; }
         .grid-header div:nth-child(1) { color: #ff5555; }
         .grid-header div:nth-child(7) { color: #5555ff; }
+        .grid-body { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; border: 1px solid var(--text); margin-bottom: 20px; }
 
-        .grid-body { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; border: 1px solid var(--text); margin-bottom: 15px; }
-        
-        .cell { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; position: relative; border-radius: 50%; }
+        /* 上段：カレンダー（今日を確認） */
+        .cell { aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; border-radius: 50%; }
         .is-today { background: var(--stamp); color: #fff !important; font-weight: bold; box-shadow: 0 0 10px var(--stamp); }
 
-        .stamp-box { border: 1px solid var(--text); border-radius: 4px; background: rgba(255,255,255,0.5); aspect-ratio: 1/1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        /* 下段：スタンプカード（履歴用） */
+        .month-nav {
+            display: flex; align-items: center; justify-content: space-between;
+            margin: 10px 0; background: rgba(0,0,0,0.03); border-radius: 8px; padding: 5px;
+        }
+        .month-nav button { background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; padding: 2px 12px; font-size: 0.9rem; }
+
+        .stamp-box { border: 1px solid var(--text); border-radius: 4px; background: rgba(255,255,255,0.5); aspect-ratio: 1/1; position: relative; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; }
         .st-mark {
-            width: 80%; height: 80%; background: var(--stamp); border-radius: 50%;
+            width: 85%; height: 85%; background: var(--stamp); border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: #fff; font-weight: bold; position: absolute; visibility: hidden; font-size: 0.7rem; z-index: 2;
+            color: #fff; font-weight: bold; position: absolute; visibility: hidden; z-index: 2;
         }
         .is-done .st-mark { visibility: visible; }
 
-        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-        .modal-inner { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 90%; max-width: 350px; text-align: left; max-height: 90vh; overflow-y: auto; }
-        input { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        
-        .color-row { display: flex; align-items: center; justify-content: space-between; padding: 8px; border: 1px solid #eee; cursor: pointer; border-radius: 8px; margin-bottom: 5px; }
-        .sw-circle { width: 25px; height: 25px; border-radius: 50%; border: 1px solid #ccc; box-shadow: inset 0 0 3px rgba(0,0,0,0.2); }
-        
-        #palette { display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; margin-top: 10px; background: #f0f0f0; padding: 5px; border-radius: 5px; }
-        .dot { aspect-ratio: 1/1; cursor: pointer; border: 1px solid #ddd; }
-        
-        .btn-save { background: #ff0000; color: #fff; border: none; padding: 15px; border-radius: 30px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; font-size: 1rem; }
-        .btn-modal-login { background: #4285F4; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 15px; font-size: 0.9rem; }
+        /* モーダル */
+        #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; }
+        .modal-inner { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 85%; max-width: 350px; text-align: left; }
+        input { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        .btn-save { background: #ff0000; color: #fff; border: none; padding: 12px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; }
         
         .hidden { display: none !important; }
     </style>
@@ -78,41 +77,33 @@
     </div>
 
     <header>
-        <h1 id="view-goal" style="font-size:1.2rem; margin:10px 0;">目標を設定してください</h1>
-        <div style="font-weight:bold;">🔥 連続 <span id="streak-num" style="font-size:2rem; color:var(--stamp);">0</span> 日</div>
-        <button onclick="openConfig()" style="margin:10px; cursor:pointer; padding:8px 20px; border-radius:20px; border:1px solid #ccc; background:#fff;">⚙️ 設定画面を開く</button>
+        <h1 id="view-goal" style="font-size:1.1rem; margin:10px 0;">目標を設定してください</h1>
+        <div style="font-weight:bold;">🔥 累計スタンプ <span id="streak-num" style="font-size:1.8rem; color:var(--stamp);">0</span> 個</div>
+        <button onclick="openConfig()" style="margin:5px; cursor:pointer; padding:5px 15px; border-radius:15px; border:1px solid #ccc; background:#fff; font-size:0.8rem;">⚙️ 設定</button>
     </header>
 
     <div id="video-frame"><div id="player"></div></div>
 
-    <h3 style="text-align:left; font-size:0.9rem; margin-bottom:5px;">📅 カレンダー (今日)</h3>
+    <h3 style="text-align:left; font-size:0.85rem; margin-bottom:5px;">📅 今月のカレンダー</h3>
     <div class="grid-header"><div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div></div>
     <div id="cal-grid" class="grid-body"></div>
 
-    <h3 style="text-align:left; font-size:0.9rem; margin-bottom:5px;">💮 ラジオ体操カード</h3>
+    <div class="month-nav">
+        <button onclick="changeMonth(-1)">＜</button>
+        <span id="card-month-title" style="font-weight:bold; font-size:0.9rem;">2024年 3月</span>
+        <button onclick="changeMonth(1)">＞</button>
+    </div>
     <div class="grid-header"><div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div></div>
     <div id="stamp-grid" class="grid-body"></div>
 </div>
 
 <div id="modal" class="hidden">
     <div class="modal-inner">
-        <h3 style="margin:0 0 15px; text-align:center;">アプリ設定</h3>
-        <div id="modal-auth-notice">
-            <p style="font-size: 0.8rem; color: #d32f2f; margin-bottom: 8px; font-weight: bold;">⚠️ 現在未ログインです。データが保存されません。</p>
-            <button class="btn-modal-login" onclick="login()">Googleでログインする</button>
-            <hr style="border: 0; border-top: 1px solid #eee; margin-bottom: 15px;">
-        </div>
-        <label style="font-weight:bold; font-size:0.8rem;">目標</label>
-        <input type="text" id="in-goal" placeholder="例：毎日6時に体操する！">
-        <label style="font-weight:bold; font-size:0.8rem;">YouTube URL</label>
-        <input type="text" id="in-url" placeholder="https://youtu.be/...">
-        <label style="font-weight:bold; font-size:0.8rem;">ハンコ文字</label>
-        <input type="text" id="in-stamp" maxlength="2" placeholder="済">
-        <div class="color-row" onclick="pick('bg')">背景色 <div id="v-bg" class="sw-circle"></div></div>
-        <div class="color-row" onclick="pick('text')">文字色 <div id="v-text" class="sw-circle"></div></div>
-        <div class="color-row" onclick="pick('stamp')">ハンコ色 <div id="v-stamp" class="sw-circle"></div></div>
-        <div id="palette" class="hidden"></div>
-        <button onclick="saveAll()" class="btn-save">設定を保存して閉じる</button>
+        <h3 style="margin-top:0;">設定</h3>
+        <label>目標</label><input type="text" id="in-goal">
+        <label>YouTube URL</label><input type="text" id="in-url">
+        <label>ハンコ文字</label><input type="text" id="in-stamp" maxlength="2">
+        <button onclick="saveAll()" class="btn-save">保存</button>
     </div>
 </div>
 
@@ -121,103 +112,30 @@ const S_URL = 'https://fzuqxlixsyoieljykdxy.supabase.co';
 const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6dXF4bGl4c3lvaWVsanlrZHh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODA4NjIsImV4cCI6MjA5MDQ1Njg2Mn0.F5uX0CvKiazJ2ptYJ090Vb-G1HlMq8Qe48f-VeZKJUM';
 const sb = supabase.createClient(S_URL, S_KEY);
 
-let player, active = 'bg', apiReady = false, currentUser = null;
+let player, apiReady = false, currentUser = null;
 let conf = { bg: '#ffffff', text: '#000000', stamp: '#ff0000', goal: '', url: '', stampTxt: '済' };
+let cardDate = new Date(); // カード表示用の日付
+let allStamps = [];
 
-const tag = document.createElement('script');
-tag.src = "https://www.youtube.com/iframe_api";
-document.head.appendChild(tag);
-
+// YouTube
+const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
 window.onYouTubeIframeAPIReady = () => { apiReady = true; if(conf.url) initPlayer(conf.url); };
 
-async function login() {
-    await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
-}
-
+async function login() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
 async function logout() { await sb.auth.signOut(); location.reload(); }
 
 sb.auth.onAuthStateChange((event, session) => {
-    const nameEl = document.getElementById('display-name');
-    const avatarEl = document.getElementById('display-avatar');
     if (session) {
         currentUser = session.user;
-        nameEl.innerText = currentUser.user_metadata.full_name || "ユーザー";
-        avatarEl.src = currentUser.user_metadata.avatar_url || "https://via.placeholder.com/28";
+        document.getElementById('display-name').innerText = currentUser.user_metadata.full_name;
+        document.getElementById('display-avatar').src = currentUser.user_metadata.avatar_url;
         document.getElementById('btn-login').classList.add('hidden');
         document.getElementById('btn-logout').classList.remove('hidden');
-        document.getElementById('modal-auth-notice').classList.add('hidden');
         syncData();
     } else {
-        currentUser = null;
-        nameEl.innerText = "未ログイン";
-        avatarEl.src = "https://via.placeholder.com/28?text=?";
-        document.getElementById('btn-login').classList.remove('hidden');
-        document.getElementById('btn-logout').classList.add('hidden');
-        document.getElementById('modal-auth-notice').classList.remove('hidden');
-        renderGrids([]);
+        renderAll();
     }
 });
-
-window.onload = () => { buildPalette(); renderGrids([]); applyUI(); };
-
-function initPlayer(url) {
-    if(!apiReady) return;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    const id = (match && match[2].length === 11) ? match[2] : null;
-    if(!id) return;
-    if(player && player.loadVideoById) {
-        player.loadVideoById(id);
-    } else {
-        player = new YT.Player('player', {
-            videoId: id, playerVars: { 'playsinline': 1 },
-            events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) registerDone(); } }
-        });
-    }
-}
-
-function buildPalette() {
-    const p = document.getElementById('palette');
-    const hues = [null, 280, 210, 180, 120, 60, 35, 0, 330, 305];
-    hues.forEach(h => {
-        for(let i=0; i<10; i++) {
-            const d = document.createElement('div');
-            d.className = 'dot';
-            const c = (h === null) ? `rgb(${i*28},${i*28},${i*28})` : `hsl(${h}, 85%, ${20+(i*7)}%)`;
-            d.style.background = c;
-            d.onclick = () => { conf[active]=c; applyUI(); p.classList.add('hidden'); };
-            p.appendChild(d);
-        }
-    });
-}
-
-function pick(k) { active = k; document.getElementById('palette').classList.toggle('hidden'); }
-
-function applyUI() {
-    document.documentElement.style.setProperty('--bg', conf.bg);
-    document.documentElement.style.setProperty('--text', conf.text);
-    document.documentElement.style.setProperty('--stamp', conf.stamp);
-    document.getElementById('view-goal').innerText = conf.goal || "目標を設定してください";
-    document.getElementById('v-bg').style.background = conf.bg;
-    document.getElementById('v-text').style.background = conf.text;
-    document.getElementById('v-stamp').style.background = conf.stamp;
-    if(conf.url && apiReady) initPlayer(conf.url);
-}
-
-async function saveAll() {
-    conf.goal = document.getElementById('in-goal').value;
-    conf.url = document.getElementById('in-url').value;
-    conf.stampTxt = document.getElementById('in-stamp').value || '済';
-    applyUI();
-    document.getElementById('modal').classList.add('hidden');
-    if(currentUser) {
-        await sb.from('user_settings').upsert({
-            user_id: currentUser.id, goal_text: conf.goal, video_url: conf.url,
-            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: conf.stampTxt
-        });
-        syncData();
-    }
-}
 
 async function syncData() {
     if(!currentUser) return;
@@ -227,50 +145,66 @@ async function syncData() {
         applyUI();
     }
     const { data: stamps } = await sb.from('daily_stamps').select('stamped_date').eq('user_id', currentUser.id);
-    const dates = stamps?.map(d => d.stamped_date) || [];
-    renderGrids(dates);
-    document.getElementById('streak-num').innerText = dates.length;
+    allStamps = stamps?.map(d => d.stamped_date) || [];
+    document.getElementById('streak-num').innerText = allStamps.length;
+    renderAll();
 }
 
-// カレンダー描画ロジックの修正版
-function renderGrids(stamped) {
+function changeMonth(diff) {
+    cardDate.setMonth(cardDate.getMonth() + diff);
+    renderAll();
+}
+
+function renderAll() {
     const now = new Date();
-    const y = now.getFullYear();
-    const m = now.getMonth();
-    
-    // YYYY-MM-DD形式の今日の日付（ローカル時間基準）
-    const todayStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const todayStr = now.toLocaleDateString('sv-SE');
 
-    const draw = (id, isCard) => {
-        const g = document.getElementById(id);
-        if(!g) return;
-        g.innerHTML = '';
+    // 1. 今月のカレンダー描画
+    const cy = now.getFullYear(), cm = now.getMonth();
+    const cGrid = document.getElementById('cal-grid');
+    cGrid.innerHTML = '';
+    const cStart = new Date(cy, cm, 1).getDay();
+    const cLast = new Date(cy, cm + 1, 0).getDate();
+    for(let i=0; i<cStart; i++) cGrid.appendChild(document.createElement('div'));
+    for(let d=1; d<=cLast; d++) {
+        const dStr = `${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const div = document.createElement('div');
+        div.className = `cell ${dStr === todayStr ? 'is-today' : ''}`;
+        div.innerText = d;
+        cGrid.appendChild(div);
+    }
 
-        const startW = new Date(y, m, 1).getDay();
-        const lastD = new Date(y, m + 1, 0).getDate();
+    // 2. 履歴カード描画
+    const hy = cardDate.getFullYear(), hm = cardDate.getMonth();
+    document.getElementById('card-month-title').innerText = `${hy}年 ${hm+1}月`;
+    const sGrid = document.getElementById('stamp-grid');
+    sGrid.innerHTML = '';
+    const sStart = new Date(hy, hm, 1).getDay();
+    const sLast = new Date(hy, hm + 1, 0).getDate();
+    for(let i=0; i<sStart; i++) sGrid.appendChild(document.createElement('div'));
+    for(let d=1; d<=sLast; d++) {
+        const dStr = `${hy}-${String(hm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const box = document.createElement('div');
+        box.className = `stamp-box ${allStamps.includes(dStr) ? 'is-done' : ''}`;
+        box.innerHTML = `<div class="st-mark">${conf.stampTxt}</div>${d}`;
+        sGrid.appendChild(box);
+    }
+}
 
-        for(let i=0; i<startW; i++) g.appendChild(document.createElement('div'));
-
-        for(let d=1; d<=lastD; d++) {
-            const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            const c = document.createElement('div');
-            const isToday = (dateStr === todayStr);
-            
-            c.className = isCard ? `stamp-box ${stamped.includes(dateStr)?'is-done':''}` : `cell ${isToday?'is-today':''}`;
-            c.innerHTML = isCard ? `<div class="st-mark">${conf.stampTxt}</div>${d}` : d;
-            g.appendChild(c);
-        }
-    };
-    draw('cal-grid', false);
-    draw('stamp-grid', true);
+function applyUI() {
+    document.documentElement.style.setProperty('--bg', conf.bg);
+    document.documentElement.style.setProperty('--text', conf.text);
+    document.documentElement.style.setProperty('--stamp', conf.stamp);
+    document.getElementById('view-goal').innerText = conf.goal || "目標を設定してください";
+    if(conf.url && apiReady) initPlayer(conf.url);
 }
 
 async function registerDone() {
-    if(!currentUser) return alert("ログインしていないためスタンプを保存できません");
-    const now = new Date();
-    const s = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if(!currentUser) return alert("ログインが必要です");
+    const s = new Date().toLocaleDateString('sv-SE');
+    if(allStamps.includes(s)) return alert("今日はもうスタンプ済みです💮");
     const { error } = await sb.from('daily_stamps').insert({stamped_date:s, user_id: currentUser.id});
-    if(!error) { syncData(); alert("スタンプ完了！お疲れ様でした💮"); }
+    if(!error) { syncData(); alert("お疲れ様でした！"); }
 }
 
 function openConfig() {
@@ -278,6 +212,26 @@ function openConfig() {
     document.getElementById('in-goal').value = conf.goal;
     document.getElementById('in-url').value = conf.url;
     document.getElementById('in-stamp').value = conf.stampTxt;
+}
+
+async function saveAll() {
+    conf.goal = document.getElementById('in-goal').value;
+    conf.url = document.getElementById('in-url').value;
+    conf.stampTxt = document.getElementById('in-stamp').value || '済';
+    if(currentUser) {
+        await sb.from('user_settings').upsert({
+            user_id: currentUser.id, goal_text: conf.goal, video_url: conf.url,
+            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: conf.stampTxt
+        });
+        syncData();
+    }
+    document.getElementById('modal').classList.add('hidden');
+}
+
+function initPlayer(url) {
+    const id = url.split('v=')[1]?.split('&')[0] || url.split('/').pop();
+    if(player) player.loadVideoById(id);
+    else player = new YT.Player('player', { videoId: id, events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) registerDone(); } } });
 }
 </script>
 </body>
