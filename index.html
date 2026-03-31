@@ -10,7 +10,6 @@
         body { 
             background-color: var(--bg); color: var(--text); 
             font-family: sans-serif; margin: 0; padding: 10px; text-align: center;
-            transition: background 0.3s, color 0.3s;
         }
         .container { max-width: 500px; margin: 0 auto; }
         
@@ -45,14 +44,27 @@
         .st-mark { width: 85%; height: 85%; background: var(--stamp); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; position: absolute; visibility: hidden; z-index: 2; }
         .is-done .st-mark { visibility: visible; }
 
-        /* モーダル */
         #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 999; }
         .modal-inner { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 85%; max-width: 350px; text-align: left; max-height: 90vh; overflow-y: auto; }
         input { width: 100%; padding: 8px; margin: 5px 0 15px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        .btn-save { background: #ff0000; color: #fff; border: none; padding: 12px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 10px; }
+        
+        .color-row { display: flex; align-items: center; justify-content: space-between; padding: 10px; border: 1px solid #eee; cursor: pointer; border-radius: 8px; margin-bottom: 5px; font-size: 0.85rem;}
+        .sw-circle { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #ccc; pointer-events: none; }
+        .active-row { border: 2px solid #ff0000; background: #fff5f5; }
+
+        #palette { 
+            display: grid; grid-template-columns: repeat(10, 1fr); gap: 2px; 
+            margin-top: 10px; margin-bottom: 15px; background: #eee; padding: 5px; 
+            border-radius: 5px; border: 1px solid #ddd;
+            overflow: hidden;
+        }
+        .dot { aspect-ratio: 1/1; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); border-radius: 2px; }
+        
+        .btn-save { background: #ff0000; color: #fff; border: none; padding: 12px; border-radius: 25px; cursor: pointer; width: 100%; font-weight: bold; margin-bottom: 10px; margin-top: 10px; }
         .btn-delete { background: #fff; color: #ff0000; border: 1px solid #ff0000; padding: 8px; border-radius: 8px; cursor: pointer; width: 100%; font-size: 0.8rem; margin-top: 20px; }
         
         .hidden { display: none !important; }
+        .p-hide { display: none; }
     </style>
 </head>
 <body>
@@ -88,12 +100,19 @@
 
 <div id="modal" class="hidden">
     <div class="modal-inner">
-        <h3 style="margin-top:0;">設定</h3>
-        <label>目標</label><input type="text" id="in-goal" placeholder="例：毎日6時に体操！">
-        <label>YouTube URL</label><input type="text" id="in-url" placeholder="https://...">
-        <label>ハンコ文字</label><input type="text" id="in-stamp" maxlength="2" placeholder="済">
-        <button onclick="saveAll()" class="btn-save">保存して閉じる</button>
+        <h3 style="margin-top:0; text-align:center;">設定</h3>
+        <label style="font-size:0.8rem; font-weight:bold;">目標</label><input type="text" id="in-goal" placeholder="例：毎日6時に体操！">
+        <label style="font-size:0.8rem; font-weight:bold;">YouTube URL</label><input type="text" id="in-url" placeholder="https://...">
+        <label style="font-size:0.8rem; font-weight:bold;">ハンコ文字</label><input type="text" id="in-stamp" maxlength="2" placeholder="済">
         
+        <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:5px;">テーマカラー選択</label>
+        <div id="row-bg" class="color-row" onclick="pick('bg')">背景色 <div id="v-bg" class="sw-circle"></div></div>
+        <div id="row-text" class="color-row" onclick="pick('text')">文字色 <div id="v-text" class="sw-circle"></div></div>
+        <div id="row-stamp" class="color-row" onclick="pick('stamp')">ハンコ色 <div id="v-stamp" class="sw-circle"></div></div>
+        
+        <div id="palette" class="p-hide"></div>
+
+        <button onclick="saveAll()" class="btn-save">保存して閉じる</button>
         <button id="delete-section" class="btn-delete hidden" onclick="deleteMyData()">登録データをすべて消去する</button>
     </div>
 </div>
@@ -103,15 +122,20 @@ const S_URL = 'https://fzuqxlixsyoieljykdxy.supabase.co';
 const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6dXF4bGl4c3lvaWVsanlrZHh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ4ODA4NjIsImV4cCI6MjA5MDQ1Njg2Mn0.F5uX0CvKiazJ2ptYJ090Vb-G1HlMq8Qe48f-VeZKJUM';
 const sb = supabase.createClient(S_URL, S_KEY);
 
-// デフォルト設定（未ログイン時）
 const DEFAULT_CONF = { bg: '#ffffff', text: '#000000', stamp: '#ff0000', goal: '目標を設定してください', url: '', stampTxt: '済' };
-let player, apiReady = false, currentUser = null;
+let player, apiReady = false, currentUser = null, active = null;
 let conf = { ...DEFAULT_CONF };
 let cardDate = new Date();
 let allStamps = [];
 
 const tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
 window.onYouTubeIframeAPIReady = () => { apiReady = true; if(conf.url) initPlayer(conf.url); };
+
+window.onload = () => { 
+    buildPalette(); 
+    renderAll();
+    applyUI();
+};
 
 async function login() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
 async function logout() { await sb.auth.signOut(); location.reload(); }
@@ -125,29 +149,16 @@ sb.auth.onAuthStateChange((event, session) => {
         document.getElementById('btn-logout').classList.remove('hidden');
         document.getElementById('delete-section').classList.remove('hidden');
         syncData();
-    } else {
-        // 未ログイン時は初期化
-        currentUser = null;
-        conf = { ...DEFAULT_CONF };
-        allStamps = [];
-        applyUI();
-        renderAll();
-        // ゲストには設定画面を自動表示
-        openConfig();
     }
 });
 
+// 通信はこの初期読み込み、スタンプ押し、保存時のみ行う
 async function syncData() {
     if(!currentUser) return;
     const { data: settings } = await sb.from('user_settings').select('*').eq('user_id', currentUser.id).maybeSingle();
-    
-    // ログインしているが設定が空（新規ユーザー）の場合、設定画面を強制表示
-    if(!settings) {
-        openConfig();
-    } else {
+    if(settings) {
         conf = { bg: settings.bg_color, text: settings.text_color, stamp: settings.stamp_color, goal: settings.goal_text, url: settings.video_url, stampTxt: settings.font_family };
     }
-    
     const { data: stamps } = await sb.from('daily_stamps').select('stamped_date').eq('user_id', currentUser.id);
     allStamps = stamps?.map(d => d.stamped_date) || [];
     document.getElementById('streak-num').innerText = allStamps.length;
@@ -155,32 +166,83 @@ async function syncData() {
     renderAll();
 }
 
-async function deleteMyData() {
-    if(!confirm("設定とスタンプ履歴をすべて削除します。よろしいですか？")) return;
-    if(currentUser) {
-        await sb.from('daily_stamps').delete().eq('user_id', currentUser.id);
-        await sb.from('user_settings').delete().eq('user_id', currentUser.id);
-        alert("データを削除しました。ログアウトします。");
-        logout();
-    }
+function buildPalette() {
+    const p = document.getElementById('palette');
+    const hues = [null, 280, 210, 180, 120, 60, 35, 0, 330, 305];
+    hues.forEach(h => {
+        for(let i=0; i<10; i++) {
+            const d = document.createElement('div');
+            d.className = 'dot';
+            const c = (h === null) ? `rgb(${i*28},${i*28},${i*28})` : `hsl(${h}, 85%, ${20+(i*7)}%)`;
+            d.style.background = c;
+            d.onclick = (e) => { 
+                e.stopPropagation();
+                if(active) {
+                    conf[active]=c; 
+                    applyUI(); // ローカルでのみUI更新（通信しない）
+                }
+            };
+            p.appendChild(d);
+        }
+    });
 }
 
-function initPlayer(url) {
-    if(!apiReady || !url) return;
-    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-    const match = url.match(regExp);
-    const videoId = (match && match[7].length == 11) ? match[7] : null;
-    if(!videoId) return;
-
-    if(player && player.loadVideoById) {
-        player.loadVideoById(videoId);
+// 丸アイコンをクリックした時の処理（一切通信しない）
+function pick(k) { 
+    const p = document.getElementById('palette');
+    if (active === k && !p.classList.contains('p-hide')) {
+        p.classList.add('p-hide');
+        active = null;
     } else {
-        player = new YT.Player('player', {
-            height: '100%', width: '100%', videoId: videoId,
-            playerVars: { 'playsinline': 1, 'rel': 0 },
-            events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) registerDone(); } }
+        active = k;
+        p.classList.remove('p-hide');
+    }
+    document.querySelectorAll('.color-row').forEach(el => el.classList.remove('active-row'));
+    if(active) document.getElementById(`row-${active}`).classList.add('active-row');
+}
+
+function applyUI() {
+    document.documentElement.style.setProperty('--bg', conf.bg);
+    document.documentElement.style.setProperty('--text', conf.text);
+    document.documentElement.style.setProperty('--stamp', conf.stamp);
+    document.getElementById('view-goal').innerText = conf.goal || "目標を設定してください";
+    if(document.getElementById('v-bg')) document.getElementById('v-bg').style.background = conf.bg;
+    if(document.getElementById('v-text')) document.getElementById('v-text').style.background = conf.text;
+    if(document.getElementById('v-stamp')) document.getElementById('v-stamp').style.background = conf.stamp;
+}
+
+function openConfig() {
+    document.getElementById('modal').classList.remove('hidden');
+    document.getElementById('in-goal').value = (conf.goal === DEFAULT_CONF.goal) ? "" : conf.goal;
+    document.getElementById('in-url').value = conf.url;
+    document.getElementById('in-stamp').value = conf.stampTxt;
+    document.getElementById('palette').classList.add('p-hide');
+    document.querySelectorAll('.color-row').forEach(el => el.classList.remove('active-row'));
+    active = null;
+}
+
+// 保存ボタンを押した時だけサーバーと通信する
+async function saveAll() {
+    const btn = event.target;
+    btn.innerText = "保存中...";
+    
+    conf.goal = document.getElementById('in-goal').value || DEFAULT_CONF.goal;
+    conf.url = document.getElementById('in-url').value;
+    conf.stampTxt = document.getElementById('in-stamp').value || '済';
+    
+    if(currentUser) {
+        await sb.from('user_settings').upsert({
+            user_id: currentUser.id, goal_text: conf.goal, video_url: conf.url,
+            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: conf.stampTxt
         });
     }
+    
+    applyUI();
+    if(conf.url && apiReady) initPlayer(conf.url);
+    renderAll();
+    
+    btn.innerText = "保存して閉じる";
+    document.getElementById('modal').classList.add('hidden');
 }
 
 function renderAll() {
@@ -215,47 +277,46 @@ function renderAll() {
     }
 }
 
-function applyUI() {
-    document.documentElement.style.setProperty('--bg', conf.bg);
-    document.documentElement.style.setProperty('--text', conf.text);
-    document.documentElement.style.setProperty('--stamp', conf.stamp);
-    document.getElementById('view-goal').innerText = conf.goal;
-    if(conf.url && apiReady) initPlayer(conf.url);
+function initPlayer(url) {
+    if(!apiReady || !url) return;
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[7].length == 11) ? match[7] : null;
+    if(!videoId) return;
+    if(player && player.loadVideoById) {
+        player.loadVideoById(videoId);
+    } else {
+        player = new YT.Player('player', {
+            height: '100%', width: '100%', videoId: videoId,
+            playerVars: { 'playsinline': 1, 'rel': 0 },
+            events: { 'onStateChange': (e) => { if(e.data === YT.PlayerState.ENDED) registerDone(); } }
+        });
+    }
 }
 
 function changeMonth(diff) { cardDate.setMonth(cardDate.getMonth() + diff); renderAll(); }
-function openConfig() {
-    document.getElementById('modal').classList.remove('hidden');
-    document.getElementById('in-goal').value = (conf.goal === DEFAULT_CONF.goal) ? "" : conf.goal;
-    document.getElementById('in-url').value = conf.url;
-    document.getElementById('in-stamp').value = conf.stampTxt;
-}
-
-async function saveAll() {
-    const newGoal = document.getElementById('in-goal').value || DEFAULT_CONF.goal;
-    const newUrl = document.getElementById('in-url').value;
-    const newStamp = document.getElementById('in-stamp').value || '済';
-    
-    if(!currentUser) {
-        alert("設定を保存するにはログインが必要です。このまま閉じると一時的な表示のみになります。");
-    } else {
-        await sb.from('user_settings').upsert({
-            user_id: currentUser.id, goal_text: newGoal, video_url: newUrl,
-            bg_color: conf.bg, text_color: conf.text, stamp_color: conf.stamp, font_family: newStamp
-        });
-        syncData();
-    }
-    conf.goal = newGoal; conf.url = newUrl; conf.stampTxt = newStamp;
-    applyUI();
-    document.getElementById('modal').classList.add('hidden');
-}
 
 async function registerDone() {
     if(!currentUser) return;
     const s = new Date().toLocaleDateString('sv-SE');
     if(allStamps.includes(s)) return;
     const { error } = await sb.from('daily_stamps').insert({stamped_date:s, user_id: currentUser.id});
-    if(!error) { syncData(); alert("💮 スタンプ完了！お疲れ様でした！"); }
+    if(!error) { 
+        allStamps.push(s);
+        document.getElementById('streak-num').innerText = allStamps.length;
+        renderAll();
+        alert("💮 スタンプ完了！お疲れ様でした！"); 
+    }
+}
+
+async function deleteMyData() {
+    if(!confirm("設定とスタンプ履歴をすべて削除します。よろしいですか？")) return;
+    if(currentUser) {
+        await sb.from('daily_stamps').delete().eq('user_id', currentUser.id);
+        await sb.from('user_settings').delete().eq('user_id', currentUser.id);
+        alert("データを削除しました。ログアウトします。");
+        logout();
+    }
 }
 </script>
 </body>
